@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+venv/
+.env
+node_modules/
+.next/
+*.joblib
+training_summary.json
+matches_export.csv
+backend/ml/saved_models/
+backend/ml/data/
+backend/data/training_uploads/
