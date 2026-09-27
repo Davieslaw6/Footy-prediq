@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: footy
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-footy}
+      POSTGRES_DB: football_predictor
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U footy -d football_predictor"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://footy:${POSTGRES_PASSWORD:-footy}@db:5432/football_predictor
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+    volumes:
+      - models_data:/app/ml/saved_models
+      - export_data:/app/ml/data
+    ports:
+      - "8000:8000"
+
+  scheduler:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://footy:${POSTGRES_PASSWORD:-footy}@db:5432/football_predictor
+    volumes:
+      - models_data:/app/ml/saved_models
+      - export_data:/app/ml/data
+    command: ["python", "-m", "ml.pipelines.retrain_job"]
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8000}
+        NEXT_PUBLIC_ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      INTERNAL_API_BASE: http://backend:8000
+    ports:
+      - "3000:3000"
+
+volumes:
+  db_data:
+  models_data:
+  export_data:
