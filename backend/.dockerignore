@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+.env
+ml/saved_models/
+ml/data/
+data/training_uploads/
+*.joblib
+training_summary.json
+matches_export.csv
+.git/
